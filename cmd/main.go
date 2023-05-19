@@ -6,9 +6,13 @@ import (
 	"github.com/go-resty/resty/v2"
 	"log"
 	"os"
+	"path"
 )
 
-const cookiesFilePath = "cookies.txt"
+const (
+	cookiesFilePath  = "cookies.txt"
+	emoticonsDirPath = "emoticons"
+)
 
 func main() {
 	var client *resty.Client
@@ -34,13 +38,13 @@ func main() {
 		}
 	}
 
-	account, err := bilibili.GetAccount(client)
-	if err != nil {
-		log.Fatalf("Get account failed: %v", err)
-	}
-
-	bilibili.GetFollowings(client, account.Mid)
-	return
+	//account, err := bilibili.GetAccount(client)
+	//if err != nil {
+	//	log.Fatalf("Get account failed: %v", err)
+	//}
+	//
+	//bilibili.GetFollowings(client, account.Mid)
+	//return
 
 	var data = make(map[string]map[string]map[string]string)
 
@@ -75,7 +79,36 @@ func main() {
 		data[userInfo.Name][emoticonPackage.PkgName] = emoticonMap
 	}
 
-	fmt.Println(data)
+	if !FileExists(emoticonsDirPath) {
+		if err = os.Mkdir(emoticonsDirPath, 0644); err != nil {
+			log.Fatalf("Mkdir failed: %v", err)
+		}
+	}
+
+	for upName, emoticons := range data {
+		if err = os.Mkdir(emoticonsDirPath+ "/" + upName, 0644); err != nil {
+			log.Printf("Mkdir %s failed: %v", upName, err)
+			continue
+		}
+		for packageName, emoticon := range emoticons {
+			packageNamePath := path.Join(emoticonsDirPath, upName, packageName)
+			if err = os.Mkdir(packageNamePath, 0644); err != nil {
+				log.Printf("Mkdir %s failed: %v", packageNamePath, err)
+				continue
+			}
+
+			for name, url := range emoticon {
+				emoticonPath := path.Join(packageNamePath, name+".png")
+				_, err := client.R().SetOutput(emoticonPath).Get(url)
+				if err != nil {
+					log.Printf("get emoticon %s failed: %v", name, err)
+					continue
+				}
+				fmt.Printf("download %s-%s success.\n", packageName, name)
+			}
+
+		}
+	}
 }
 
 func FileExists(filename string) bool {
