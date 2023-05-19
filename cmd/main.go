@@ -34,6 +34,16 @@ func main() {
 		}
 	}
 
+	account, err := bilibili.GetAccount(client)
+	if err != nil {
+		log.Fatalf("Get account failed: %v", err)
+	}
+
+	bilibili.GetFollowings(client, account.Mid)
+	return
+
+	var data = make(map[string]map[string]map[string]string)
+
 	initRoom, err := bilibili.GetInitRoom(client, 502)
 	if err != nil {
 		log.Fatalf("Get init room failed: %v", err)
@@ -44,7 +54,28 @@ func main() {
 		log.Fatalf("Get user info failed: %v", err)
 	}
 
-	fmt.Println(*userInfo)
+	data[userInfo.Name] = make(map[string]map[string]string)
+
+	fmt.Println(initRoom.RoomId)
+	emoticonPackages, err := bilibili.GetEmoticonPackage(client, initRoom.RoomId)
+	if err != nil {
+		log.Fatalf("Get emoticon failed: %v", err)
+	}
+
+	for _, emoticonPackage := range emoticonPackages {
+		if emoticonPackage.PkgName == "通用表情" {
+			continue
+		}
+
+		emoticonMap := make(map[string]string, len(emoticonPackage.Emoticons))
+		for _, emoticon := range emoticonPackage.Emoticons {
+			emoticonMap[emoticon.Emoji] = emoticon.Url
+		}
+
+		data[userInfo.Name][emoticonPackage.PkgName] = emoticonMap
+	}
+
+	fmt.Println(data)
 }
 
 func FileExists(filename string) bool {

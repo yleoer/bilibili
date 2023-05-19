@@ -2,13 +2,13 @@ package bilibili
 
 import (
 	"errors"
-	"fmt"
 	"github.com/go-resty/resty/v2"
 	"strconv"
 )
 
 const (
-	UserInfoUrl = "https://api.bilibili.com/x/space/acc/info"
+	UserInfoUrl = "https://api.bilibili.com/x/space/wbi/acc/info"
+	AccountUrl  = "https://api.bilibili.com/x/member/web/account"
 )
 
 type UserInfo struct {
@@ -36,13 +36,42 @@ func GetUserInfo(client *resty.Client, uid int) (*UserInfo, error) {
 	}
 
 	var result UserInfoResult
-	resp, err := client.R().SetResult(&result).
+	_, err := client.R().SetResult(&result).
 		SetQueryParam("mid", strconv.Itoa(uid)).Get(UserInfoUrl)
 	if err != nil {
-			return nil, err
+		return nil, err
 	}
 
-	fmt.Println(resp, result)
+	if result.Code != 0 {
+		return nil, errors.New(result.Message)
+	}
+
+	return &result.Data, nil
+}
+
+type Account struct {
+	Mid      int    `json:"mid"`
+	Uname    string `json:"uname"`
+	Userid   string `json:"userid"`
+	Sign     string `json:"sign"`
+	Birthday string `json:"birthday"`
+	Sex      string `json:"sex"`
+	NickFree bool   `json:"nick_free"`
+	Rank     string `json:"rank"`
+}
+
+type AccountResult struct {
+	Code    int     `json:"code"`
+	Message string  `json:"message"`
+	Data    Account `json:"data"`
+}
+
+func GetAccount(client *resty.Client) (*Account, error) {
+	var result AccountResult
+	_, err := client.R().SetResult(&result).Get(AccountUrl)
+	if err != nil {
+		return nil, err
+	}
 
 	return &result.Data, nil
 }
